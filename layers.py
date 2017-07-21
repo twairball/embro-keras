@@ -4,15 +4,16 @@ Custom Keras layers used on the pastiche model.
 
 import tensorflow as tf
 import keras
-from keras import initializations
+from keras import initializers
 from keras.layers import ZeroPadding2D, Layer, InputSpec
 
 # Extending the ZeroPadding2D layer to do reflection padding instead.
 class ReflectionPadding2D(ZeroPadding2D):
     def call(self, x, mask=None):
+        ((top_pad, bottom_pad), (left_pad, right_pad)) = self.padding
         pattern = [[0, 0],
-                   [self.top_pad, self.bottom_pad],
-                   [self.left_pad, self.right_pad],
+                   [top_pad, bottom_pad],
+                   [left_pad, right_pad],
                    [0, 0]]
         return tf.pad(x, pattern, mode='REFLECT')
 
@@ -20,8 +21,8 @@ class ReflectionPadding2D(ZeroPadding2D):
 class InstanceNormalization(Layer):
     def __init__(self, epsilon=1e-5, weights=None,
                  beta_init='zero', gamma_init='one', **kwargs):
-        self.beta_init = initializations.get(beta_init)
-        self.gamma_init = initializations.get(gamma_init)
+        self.beta_init = initializers.get(beta_init)
+        self.gamma_init = initializers.get(gamma_init)
         self.epsilon = epsilon
         super(InstanceNormalization, self).__init__(**kwargs)
 
@@ -29,9 +30,14 @@ class InstanceNormalization(Layer):
         # This currently only works for 4D inputs: assuming (B, H, W, C)
         self.input_spec = [InputSpec(shape=input_shape)]
         shape = (1, 1, 1, input_shape[-1])
-
-        self.gamma = self.gamma_init(shape, name='{}_gamma'.format(self.name))
-        self.beta = self.beta_init(shape, name='{}_beta'.format(self.name))
+        # self.gamma = self.gamma_init(shape, name='{}_gamma'.format(self.name))
+        # self.beta = self.beta_init(shape, name='{}_beta'.format(self.name))
+        self.gamma = self.add_weight(shape=shape,
+                                name='{}_gamma'.format(self.name),
+                                initializer=self.gamma_init)
+        self.beta = self.add_weight(shape=shape,
+                                name='{}_beta'.format(self.name),
+                                initializer=self.beta_init)        
         self.trainable_weights = [self.gamma, self.beta]
 
         self.built = True
@@ -62,8 +68,15 @@ class ConditionalInstanceNormalization(InstanceNormalization):
         self.input_spec = [InputSpec(shape=input_shape)]
         shape = (self.nb_classes, 1, 1, input_shape[-1])
 
-        self.gamma = self.gamma_init(shape, name='{}_gamma'.format(self.name))
-        self.beta = self.beta_init(shape, name='{}_beta'.format(self.name))
+        # self.gamma = self.gamma_init(shape, name='{}_gamma'.format(self.name))
+        # self.beta = self.beta_init(shape, name='{}_beta'.format(self.name))
+        self.gamma = self.add_weight(shape=shape,
+                                name='{}_gamma'.format(self.name),
+                                initializer=self.gamma_init)
+        self.beta = self.add_weight(shape=shape,
+                                name='{}_beta'.format(self.name),
+                                initializer=self.beta_init)        
+
         self.trainable_weights = [self.gamma, self.beta]
 
         self.built = True
