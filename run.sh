@@ -3,7 +3,7 @@
 
 # preprocess gram matrices for style image
 # python make_gram_dataset.py --gram_dataset_path data/bf_grams.h5 --style_dir images/style-images/ \
---style_imgs bird_flower.jpg --style_img_size 384 --gpu 1
+# --style_imgs bird_flower.jpg --style_img_size 384 --gpu 0
 
 # train with defaults
 python train.py --norm_by_channels --coco_path data/ms-coco-256.h5 \
