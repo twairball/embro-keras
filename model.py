@@ -46,7 +46,7 @@ def residual_block(x, n_filters, nb_classes=1, targets=None):
     o = conv(o, n_filters, relu=False, nb_classes=nb_classes, targets=targets)
     # Shortcut connection
     # o = merge([o, x], mode='sum')
-    o = Add([o,x])
+    o = Add()([o,x])
     return o
 
 
