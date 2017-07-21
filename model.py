@@ -6,7 +6,8 @@ import keras
 from keras.models import Model
 from keras.layers import (Convolution2D, Activation, UpSampling2D,
                           ZeroPadding2D, Input, BatchNormalization,
-                          merge, Lambda)
+                          Lambda)
+from keras.layers.merge import Add
 from layers import (ReflectionPadding2D, InstanceNormalization,
                     ConditionalInstanceNormalization)
 from keras.initializers import RandomNormal
@@ -45,7 +46,7 @@ def residual_block(x, n_filters, nb_classes=1, targets=None):
     o = conv(o, n_filters, relu=False, nb_classes=nb_classes, targets=targets)
     # Shortcut connection
     # o = merge([o, x], mode='sum')
-    o = merge.Add([o,x])
+    o = Add([o,x])
     return o
 
 
