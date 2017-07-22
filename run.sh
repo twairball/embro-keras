@@ -7,13 +7,15 @@
 
 # train with defaults
 python train.py --norm_by_channels --coco_path data/ms-coco-256.h5 \
- --gram_dataset_path data/bf_grams.h5 --checkpoint_path results/bf.h5
+ --gram_dataset_path data/bf_grams.h5 --checkpoint_path results/bf.h5 \ 
+ --log_dir results/bf_logs/
 
 # train with pytorch settings
 python train.py --lr 1e-3 --content_weight 1e5 --style_weight 1e10 --tv_weight 1 \
 --norm_by_channels --coco_path data/ms-coco-256.h5 \
---gram_dataset_path data/bf_grams.h5 --checkpoint_path results/bf_pytorch.h5
+--gram_dataset_path data/bf_grams.h5 --checkpoint_path results/bf_pytorch.h5 \ 
+--log_dir results/bf_pytorch_logs/
 
 # evaluate
-python fast_style_transfer.py --checkpoint_path results/bf.h5 --input_path images/content-images\
+python fast_style_transfer.py --checkpoint_path results/bf.h5 --input_path images/content-images \
 --output_path results/ --use_style_name
