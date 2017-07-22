@@ -14,6 +14,7 @@ import tensorflow as tf
 import keras
 import keras.backend as K
 from keras.optimizers import Adam
+from keras.callbacks import ModelCheckpoint, TensorBoard
 from model import pastiche_model
 from training import get_loss_net, get_content_losses, get_style_losses, tv_loss
 from utils import preprocess_input, config_gpu, save_checkpoint, std_input_list
@@ -42,6 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_path', type=str, default='checkpoint.h5')
     parser.add_argument('--gpu', type=str, default='')
     parser.add_argument('--allow_growth', default=False, action='store_true')
+    parser.add_argument('--log_dir', type=str, help="Tensorboard callback log_dir")
 
     args = parser.parse_args()
     # Arguments parsed
@@ -143,21 +145,33 @@ if __name__ == '__main__':
                 #Correct the Gram matrices from the dataset
                 Y[k] /= Y[k].shape[-1]
 
-    # Get a log going
-    log = {}
-    log['args'] = args
-    log['style_names'] = styles[:args.nb_classes]
-    log['style_image_sizes'] = style_sizes
-    log['total_loss'] = []
-    log['style_loss'] = {k: [] for k in args.style_layers}
-    log['content_loss'] = {k: [] for k in args.content_layers}
-    log['tv_loss'] = []
+    # # Get a log going
+    # log = {}
+    # log['args'] = args
+    # log['style_names'] = styles[:args.nb_classes]
+    # log['style_image_sizes'] = style_sizes
+    # log['total_loss'] = []
+    # log['style_loss'] = {k: [] for k in args.style_layers}
+    # log['content_loss'] = {k: [] for k in args.content_layers}
+    # log['tv_loss'] = []
 
-    # Strip the extension if there is one
-    checkpoint_path = os.path.splitext(args.checkpoint_path)[0]
+    # save paths
+    chkpt_path = args.checkpoint_path
+    log_dir = args.log_dir
+    weights_path = os.path.splitext(args.checkpoint_path)[0] + "_weights.h5"
+    
+    # checkpoints
+    model_checkpoint = ModelCheckpoint(chkpt_path, monitor='total_loss')
+    model_checkpoint.set_model(pastiche_net)
+
+    # tensorboard
+    if (log_dir):
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        tensorboard = TensorBoard(log_dir=log_dir)
+        tensorboard.set_model(pastiche_net)
 
     start_time = time.time()
-    # for it in range(args.num_iterations):
     for it in range(args.num_iterations):
         if batch_idx >= batches_per_epoch:
             print('Epoch done. Going back to the beginning...')
@@ -180,14 +194,29 @@ if __name__ == '__main__':
         stop_time2 = time.time()
         # Log the statistics
 
-        log['total_loss'].append(out[0])
+
+        # iteration log
+        # for tensorboard
+        logs = dict(total_loss=out[0], tv_loss=out[-1])
         offset = 1
+        content_loss = 0
         for i, k in enumerate(args.content_layers):
-            log['content_loss'][k].append(out[offset + i])
+            # log['content_loss'][k].append(out[offset + i])
+            key = "content_loss_%s" % k
+            content_block_loss = out[offset + i]
+            logs[key] = content_block_loss
+            content_loss += content_block_loss
+        logs['content_loss'] = content_loss
+
         offset += len(args.content_layers)
+        style_loss = 0
         for i, k in enumerate(args.style_layers):
-            log['style_loss'][k].append(out[offset + i])
-        log['tv_loss'].append(out[-1])
+            # log['style_loss'][k].append(out[offset + i])
+            key = "style_loss_%s" % k
+            style_block_loss = out[offset + i]
+            logs[key] = style_block_loss
+            style_loss += style_block_loss
+        logs['style_loss'] = style_loss
 
         stop_time = time.time()
         print('Iteration %d/%d: loss = %f. t = %f (%f)' %(it + 1,
@@ -195,9 +224,19 @@ if __name__ == '__main__':
               stop_time2 - start_time2))
 
         if not ((it + 1) % args.save_every):
-            print('Saving checkpoint in %s.h5...' %(checkpoint_path))
-            save_checkpoint(checkpoint_path, pastiche_net, log)
+            print('Saving checkpoint in %s...' %(args.checkpoint_path))
+            model_checkpoint.on_epoch_end(it)
             print('Checkpoint saved.')
 
+        # tensorboard
+        if (log_dir):
+            tensorboard.on_epoch_end(it, logs)
+
         start_time = time.time()
-    save_checkpoint(checkpoint_path, pastiche_net, log)
+
+    # close callback
+    if (log_dir):
+        tensorboard.on_train_end(None)
+
+    # save model
+    pastiche_net.save_weights(weights_path)

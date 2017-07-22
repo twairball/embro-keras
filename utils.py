@@ -25,10 +25,13 @@ def config_gpu(gpu, allow_growth):
     K.set_session(session)
 
 def save_checkpoint(checkpoint_path, pastiche_net, log):
+    
+    # save model weights safely
+    pastiche_net.save_weights(checkpoint_path + "_weights.h5")
+    
     with h5py.File(checkpoint_path + '.h5', 'w') as f:
         g  = f.create_group('model_weights')
         # pastiche_net.save_weights_to_hdf5_group(g)
-        pastiche_net.save_weights(checkpoint_path)
         g =  f.create_group('log')
         g.create_dataset('total_loss', data=np.array(log['total_loss']))
         g.create_dataset('tv_loss', data=np.array(log['tv_loss']))
