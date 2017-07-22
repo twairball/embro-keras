@@ -21,6 +21,7 @@ def conv(x, n_filters, kernel_size=3, stride=1, relu=True, nb_classes=1, targets
     if not kernel_size % 2:
         raise ValueError('Expected odd kernel size.')
     pad = (kernel_size - 1) / 2
+    pad = int(pad)
     o = ReflectionPadding2D(padding=(pad, pad))(x)
 
     # initialize kernel weights with Normal dist w/ stddev 0.01 instead of 0.05
